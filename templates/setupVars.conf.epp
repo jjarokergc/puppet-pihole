@@ -1,9 +1,8 @@
-<%- |  
-Hash $phs,
-$ipv4_address
-| -%>
+<%- |  Hash $phs, | -%>
 #;
-#; File managed by puppet
+#; File seeded by puppet for the unattended installation of pihole
+#; Parameters defined in pihole::setup are managed by puppet and will be overwritten
+#; All other parameters are managed by pihole
 #;
 BLOCKING_ENABLED=true
 CACHE_SIZE=10000
@@ -13,11 +12,13 @@ DNSMASQ_LISTENING=<%= $phs['DNSMASQ_LISTENING'] %>
 DNSSEC=false
 INSTALL_WEB_INTERFACE=true
 INSTALL_WEB_SERVER=true
-IPV4_ADDRESS=<%= $ipv4_address %>
-IPV6_ADDRESS=
 LIGHTTPD_ENABLED=true
 PIHOLE_DNS_1=<%= $phs['PIHOLE_DNS_1'] %>
 PIHOLE_DNS_2=<%= $phs['PIHOLE_DNS_2'] %>
+PIHOLE_DNS_3=<%= $phs['PIHOLE_DNS_3'] %>
+PIHOLE_DNS_4=<%= $phs['PIHOLE_DNS_4'] %>
+PIHOLE_DNS_5=<%= $phs['PIHOLE_DNS_5'] %>
+PIHOLE_DNS_6=<%= $phs['PIHOLE_DNS_6'] %>
 PIHOLE_INTERFACE=<%= $phs['PIHOLE_INTERFACE'] %>
 QUERY_LOGGING=true
 REV_SERVER=<%= $phs['REV_SERVER'] %>

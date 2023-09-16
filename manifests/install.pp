@@ -1,66 +1,74 @@
+# Clone Pihole installation script from github at requested version
+# Execute installation script to install pihole
 #
-# Install Pihole from github
+# NOTE: This does not update an existing pihole installation
+#
+# Requires
+#   mod 'puppet-extlib', '7.0.0' 
+#   mod 'puppetlabs-accounts', '8.1.0' 
+#   mod 'puppetlabs-vcsrepo', '6.1.0'
+#   mod 'puppetlabs-git', '0.5.0'
 #
 class pihole::install {
-
   # VARIABLES
   $phi = lookup('pihole::install')    # Installation parameters
   $phs = lookup('pihole::setup')      # Setup variables
   $phf = lookup('pihole::ftldns')     # FTLDNS configuration
   $phl = lookup('pihole::list')       # White- and black-lists
 
-
-  # Network Interface
-  $netmask_cidr = extlib::netmask_to_cidr($::netmask)
-  $ipv4_address = "${::ipaddress}/${netmask_cidr}"
-
-  # Configuration Files
+# Configuration Files
   $setup_vars_conf = "${phi['path']['config']}/setupVars.conf"
 
-  # Download pihole
+# Clone pihole from github 
+# This clones the pihole installation script at the specified revision
+# This does not update the pihole service
   vcsrepo { $phi['path']['download'] :
-    ensure   => present,
+    ensure   => latest,
     provider => git,
+    revision => $phi['revision'],
     source   => $phi['repo'],
     depth    => 1,
+    notify   => Exec['Install Pihole'],
   }
 
-  # Create user and group
+# Create user and group
   accounts::user { 'pihole':
-  uid      => 1998,
-  gid      => 1998,
-  groups   => ['www-data'],
-  password => '!!',
-  system   => true,
-  shell    => '/usr/sbin/nologin',
+    uid      => 1998,
+    gid      => 1998,
+    groups   => ['www-data'],
+    password => '!!',
+    system   => true,
+    shell    => '/usr/sbin/nologin',
   }
 
-  # Pre-seed variables for unattended install
-  file {$phi['path']['config']:
+# Pre-seed variables for unattended install
+  file { $phi['path']['config']:
     ensure => directory,
     group  => 'pihole',
     owner  => 'pihole',
     mode   => '0775',
   }
   file { 'preseed setupVars' :
-    ensure  => present,
+    ensure  => file,
     replace => false, # Do not overwrite changes. Future updates manged by file_line below
     path    => $setup_vars_conf,
     owner   => 'root',
     group   => 'root',
     mode    => '0644',
-    content => epp('pihole/setupVars.conf.epp',
-        {
-        'phs'          => $phs,
-        'ipv4_address' => $ipv4_address,
-        }
-      ),
-    require => File[ $phi['path']['config'] ],
-    notify  => Exec['Update Pihole']
+    content => epp('pihole/setupVars.conf.epp', { 'phs' => $phs, }),
+    require => File[$phi['path']['config']],
+    notify  => Exec['Update Pihole'],
   }
-
-  # Maintain consistent configuration
-  # Enforce setupVars
+# Placeholder index.html
+  file { '/var/www/html/index.html':
+    ensure  => file,
+    replace => false,
+    content => epp('pihole/index.html.epp', { 'fqdn' => $facts['fqdn'] }),
+    require => Exec['Install Pihole'],
+  }
+# Maintain consistent configuration of variables specified in
+# pihole::setup data. GUI changes will be overwritten for all
+# variables in this list.
   $phs.each | String $k, String $v | {
     file_line { $k:
       path               => $setup_vars_conf,
@@ -69,11 +77,14 @@ class pihole::install {
       multiple           => false, # Should only be one instance of a variable
       replace            => true,
       append_on_no_match => true,
-      require            => File[ 'preseed setupVars' ],
-      notify             => Exec['Update Pihole']
+      require            => File['preseed setupVars'],
+      notify             => Exec['Update Pihole'],
     }
   }
-  # FTLDNS Update pihole-FTL.conf onfiguration file
+# FTLDNS Update pihole-FTL.conf onfiguration file
+# Maintain consistent configuration of variables specified in
+# pihole::ftldns. GUI changes will be overwritten for all
+# variables in this list.
   $phf.each | String $k, String $v | {
     file_line { $k:
       path               => "${phi['path']['config']}/pihole-FTL.conf",
@@ -83,30 +94,31 @@ class pihole::install {
       replace            => true,
       append_on_no_match => true,
       require            => Exec['Install Pihole'],
-      notify             => Exec['Sighup piholeFTL']
+      notify             => Exec['Sighup piholeFTL'],
     }
   }
 
-  # Install pihole
-  exec{'Install Pihole':
+# Install pihole
+  exec { 'Install Pihole':
     path        => '/usr/bin:/usr/sbin:/bin',
     user        => 'root',
     command     => [
-        '/bin/bash',
-        "${phi['path']['download']}/automated install/basic-install.sh",
-        '--unattended',
-        ],
+      '/bin/bash',
+      "${phi['path']['download']}/automated install/basic-install.sh",
+      '--unattended',
+    ],
     environment => [
-        'USER=pihole',
-        ],
-    creates     => '/usr/local/bin/pihole',
+      'USER=pihole',
+    ],
+    #creates     => '/usr/local/bin/pihole',
+    refreshonly => true,
     require     => [
-        Vcsrepo[ $phi['path']['download'] ],
-        File[ 'preseed setupVars' ],
-        ],
+      Vcsrepo[$phi['path']['download']],
+      File['preseed setupVars'],
+    ],
   }
 
-  # Restart pihole upon configuration changes
+# Restart pihole upon configuration changes
   exec { 'Update Pihole':
     path        => ['/bin/', '/usr/bin', '/usr/local/bin/'],
     command     => 'pihole -g',
@@ -114,7 +126,7 @@ class pihole::install {
     refreshonly => true,
   }
 
-  # Restart FTLDNS upon configuration change
+# Restart FTLDNS upon configuration change
   exec { 'Sighup piholeFTL':
     path        => ['/bin/', '/usr/bin', '/usr/local/bin/'],
     command     => 'pkill -SIGRTMIN+0 pihole-FTL',
@@ -122,34 +134,37 @@ class pihole::install {
     refreshonly => true,
   }
 
-  # White and Black Listing
-  # For each type of list defined in pihole::list: yaml data structure
-  $phl.each | String $list_name, Array $list_domain | {     # $list_name: pihole white/black list name such as 'white-wild'
-                                                            # $list_domain: array of domain names or regex expressions
-    # For each domain name within this list
-    $phl[$list_name].each | Integer $index, String $dom | { # $integer: array index
-                                                            # $dom: domain/regex value in array
+# White and Black Listing
+# For each type of list defined in pihole::list: yaml data structure
+  if $phl != undef { # pihole::list is defined in the yaml config file
 
-      # Form the correct options for the pihole command that updates white/black lists
-      case $list_name { # $list_name: must match array name in pihole::list: yaml data
-        'whitelist':  # Whitelist domain
+    $phl.each | String $list_name, Array $list_domain | { # $list_name: pihole white/black list name such as 'white-wild'
+      # $list_domain: array of domain names or regex expressions
+      # For each domain name within this list
+
+      $phl[$list_name].each | Integer $index, String $dom | { # $integer: array index
+        # $dom: domain/regex value in array
+
+        # Form the correct options for the pihole command that updates white/black lists
+        case $list_name { # $list_name: must match array name in pihole::list: yaml data
+          'whitelist':  # Whitelist domain
             {
               # Grep search string. This is used for the 'unless' match.
               $dom_grep = $dom
               # Pihole command line directive
               $option = '-w'
             }
-        'blacklist':  # Blacklist domain
+            'blacklist':  # Blacklist domain
             { fail("NOT IMPLEMENTED '${list_name}'")
               # Pihole command line directive
               $option = '-b'
             }
-        'white-regex':# Whitelist domain as regex
+            'white-regex':# Whitelist domain as regex
             { fail("NOT IMPLEMENTED '${list_name}'")
               # Pihole command line directive
               $option = '--white-regex'
             }
-        'white-wild': # Whitelist domain with wildcard subdomains
+            'white-wild': # Whitelist domain with wildcard subdomains
             {
               # Form regex version. This is used for the 'unless' match.
               $dom_escape = regexpescape($dom)
@@ -158,31 +173,30 @@ class pihole::install {
               # Pihole command line directive
               $option = '--white-wild'
             }
-        'black-regex':# Blacklist domain as regex
+            'black-regex':# Blacklist domain as regex
             { fail("NOT IMPLEMENTED '${list_name}'")
               # Pihole command line directive
               $option = '--regex'
             }
-        'black-wild': # Blacklist domain with wildcard subdomains
+            'black-wild': # Blacklist domain with wildcard subdomains
             { fail("NOT IMPLEMENTED '${list_name}'")
               # Pihole command line directive
               $option = '--wild'
             }
-        default:
+            default:
             { fail("Hiera 'pihole::list' data does not contain array name ${list_name}") }
-      } # Case
+        } # Case
 
-      # Use pihole command to add the domain to the white/black list
-      exec {"${list_name}-${dom}":
-        path    => ['/bin/', '/usr/bin', '/usr/local/bin/'],
-        command => "pihole ${option} '${dom}' --comment 'Managed by Puppet'",
-        user    => 'root',
-        unless  => "pihole ${option} --list | grep -F '${dom_grep}'",
-        notify  => Exec['Update Pihole'],
-        require => Exec['Install Pihole'],
-      } # Exec
-
-    } # For each domain within the list
-  } # For each Hash list
-
+        # Use pihole command to add the domain to the white/black list
+        exec { "${list_name}-${dom}":
+          path    => ['/bin/', '/usr/bin', '/usr/local/bin/'],
+          command => "pihole ${option} '${dom}' --comment 'Managed by Puppet'",
+          user    => 'root',
+          unless  => "pihole ${option} --list | grep -F '${dom_grep}'",
+          notify  => Exec['Update Pihole'],
+          require => Exec['Install Pihole'],
+        } # Exec
+      } # For each domain within the list
+    } # For each pihole::list element
+  } # If pihole::list is defined
 }

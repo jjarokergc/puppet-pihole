@@ -1,0 +1,14 @@
+<%- |  $fqdn, | -%>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Puppet Installation of Pihole</title>
+</head>
+<body>
+    <p>This module was installed by puppet.</p>
+    <p>Did you mean to access the <a href="<%= $fqdn -%>/admin">Admin</a> page?</p>
+    <object type="text/html" data="index.lighttpd.html" width="80%" height="800"></object>
+</body>
+</html>
