@@ -8,7 +8,7 @@
 </head>
 <body>
     <p>This module was installed by puppet.</p>
-    <p>Did you mean to access the <a href="<%= $fqdn -%>/admin">Admin</a> page?</p>
+    <p>Did you mean to access the <a href="http://<%= $fqdn -%>/admin">Admin</a> page?</p>
     <object type="text/html" data="index.lighttpd.html" width="80%" height="800"></object>
 </body>
 </html>
