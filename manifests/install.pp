@@ -4,7 +4,6 @@
 # NOTE: This does not update an existing pihole installation
 #
 # Requires
-#   mod 'puppet-extlib', '7.0.0' 
 #   mod 'puppetlabs-accounts', '8.1.0' 
 #   mod 'puppetlabs-vcsrepo', '6.1.0'
 #   mod 'puppetlabs-git', '0.5.0'
