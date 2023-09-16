@@ -19,6 +19,10 @@ lookup_options:
     merge:
       strategy: deep
       merge_hash_arrays: true
+  pihole::custom_list:  # DNS entries to add to custom.list
+    merge:
+      strategy: deep
+      merge_hash_arrays: true
 
 # Clone pihole installation script from git
 pihole::install:
