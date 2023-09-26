@@ -72,7 +72,7 @@ pihole::list:
   #   - atleastone.example.com
   # white-regex:
   #   - atleastone.example.com
-  black-regex:
+  # black-regex:
       # Non IPv6 network; block AAAA.  
       # See https://discourse.pi-hole.net/t/option-to-block-not-forward-all-aaaa-queries/34837/36
     # - '.*;querytype=AAAA'   
