@@ -23,6 +23,10 @@ lookup_options:
     merge:
       strategy: deep
       merge_hash_arrays: true
+  pihole::dnsmasq:      # Config directives for dnsmasq
+    merge:
+      strategy: deep
+      merge_hash_arrays: true
 
 # Clone pihole installation script from git
 pihole::install:
@@ -45,12 +49,12 @@ pihole::setup:
   # PIHOLE_DNS_4: '208.67.220.220'
   # PIHOLE_DNS_5: '4.2.2.1'         # Level3
   # PIHOLE_DNS_6: '4.2.2.2'
-  REV_SERVER: 'true'       # Convert IPs to hostnames by checking with router
-  REV_SERVER_CIDR: '192.168.0.0/16'
-  REV_SERVER_TARGET: '192.168.1.1'
-  REV_SERVER_DOMAIN: ''
+  # REV_SERVER: 'true'       # Convert IPs to hostnames by checking with router
+  # REV_SERVER_CIDR: '192.168.0.0/16'
+  # REV_SERVER_TARGET: '192.168.1.1'
+  # REV_SERVER_DOMAIN: ''
 
-pihole::ftldns: # parameters in pihole-FTL.conf
+pihole::ftldns: # parameters in pihole-FTL.conf used in the GUI
   BLOCKINGMODE: 'NULL' #NULL|IP-NODATA-AAAA|IP|NXDOMAIN¶
   PRIVACYLEVEL: '0' # Show everything
   PIHOLE_PTR: 'HOSTNAMEFQDN' # Host's global hostname
@@ -68,8 +72,10 @@ pihole::list:
   #   - atleastone.example.com
   # white-regex:
   #   - atleastone.example.com
-  # black-regex:
-  #   - atleastone.example.com
+  black-regex:
+      # Non IPv6 network; block AAAA.  
+      # See https://discourse.pi-hole.net/t/option-to-block-not-forward-all-aaaa-queries/34837/36
+    # - '.*;querytype=AAAA'   
   # black-wild:
   #   - atleastone.example.com
 
@@ -79,3 +85,13 @@ pihole::list:
 # This is useful in homelab environments.
 pihole::custom_list:  # DNS entries to add to custom.list
 #  example.localdomain: 192.168.1.200
+
+pihole::dnsmasq: # Add custom config to dnsmasq such as for local dns forwarding
+  # - path: '/etc/dnsmasq.d'
+  #   files:
+  #     - name: '02-localdns.conf'
+  #       comment: 'Local DNS Forwarding'
+  #       directives:
+  #         - entry: 'server=/staging/10.10.20.101'
+  #           match: 'staging'  # Unique term to match
+  #           comment: 'Selective dns forwarding for local domain staging'
