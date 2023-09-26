@@ -173,7 +173,9 @@ class pihole::install {
               $option = '--white-wild'
             }
             'black-regex':# Blacklist domain as regex
-            { fail("NOT IMPLEMENTED '${list_name}'")
+            {
+              # Grep search string to prefix white-wild string.  This is used for the 'unless' match.
+              $dom_grep = $dom
               # Pihole command line directive
               $option = '--regex'
             }
@@ -191,7 +193,7 @@ class pihole::install {
           path    => ['/bin/', '/usr/bin', '/usr/local/bin/'],
           command => "pihole ${option} '${dom}' --comment 'Managed by Puppet'",
           user    => 'root',
-          unless  => "pihole ${option} --list | grep -F '${dom_grep}'",
+          unless  => "pihole ${option} --list | grep -iF '${dom_grep}'",
           notify  => Exec['Update Pihole'],
           require => Exec['Install Pihole'],
         } # Exec
