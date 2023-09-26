@@ -72,7 +72,7 @@ class pihole::install {
     file_line { $k:
       path               => $setup_vars_conf,
       line               => "${k}=${v}",
-      match              => "^${k}",
+      match              => "^${k}=",
       multiple           => false, # Should only be one instance of a variable
       replace            => true,
       append_on_no_match => true,
