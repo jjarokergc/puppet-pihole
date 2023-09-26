@@ -2,18 +2,36 @@
 
 The development repository is located at: <https://gitlab.jaroker.org>.  A mirror repository is pushed to: <https://github.com/jjarokergc/puppet-pihole> for public access.
 
+This module clones the installatin script from the github repository and performs an unattended installation.
+
 ## Installation
 
-Installation of Pi-hole is performed by cloning the installatin script from the github repository, followed by execution of unattended installation.
+This is an example role definition for a pihole server
+
+```puppet
+
+#
+# Manage custom dns entry in pihole dns servers
+#
+class role::oss::pihole_server {
+  include pihole::install     # Install pihole
+  include pihole::collection  # (optional) Collect exported resources for custom dns entries
+  include pihole::dnsmasq     # (optional) Add config file to dnsmasq
+}
+
+```
+
 
 ### Upgrading Pi-hole
 This module does not upgrade Pi-hole.  This must be performed manually.  
 
 ## Configuration
 
-This module enforces the variables defined in pihole::setup and pihole::ftldns.  
+This module enforces the variables defined in pihole::setup, pihole::ftldns and pihole::dnsmasq
 
 The setupVars.conf template can have more variables defined than those specified in pihole::setup and these will be used in the unattended installation, but these extra variables are managed by Pihole and can be modified via the web interface.  Only the variables specified in pihole::setup and pihole::ftldns will be restored to their defined values at each puppet run.
+
+Configuration files for dnsmasq can be created by including the class and defining the configuration files and directives in hiera.  See `data\common.yaml` for an example dns forwarding configuration.
 
 ## Managing pihole custom.list
 
@@ -89,6 +107,11 @@ pihole::custom_list:  # DNS entries to add to custom.list
 
 ## Versions
 
+### 2.1.1
+  * Implemented regex blacklisting
+  * Implemented config file generation for dnsmasq
+### 2.1.0
+  * Bugfix where setupvars were not being enforced
 ### 2.0.1
 * Update to readme
 * Update to dependency
