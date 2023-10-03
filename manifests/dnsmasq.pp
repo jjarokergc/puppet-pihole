@@ -25,6 +25,7 @@ class pihole::dnsmasq {
           ensure  => file,
           replace => false,
           content => $filecomment,
+          require => Exec['Install Pihole'],
         }
 
         # For each directive within this file...
